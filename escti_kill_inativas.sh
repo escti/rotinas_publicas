@@ -25,7 +25,6 @@ DATA=`date --date="0 days ago" +%Y%m%d%H%M%S`
 export ORACLE_PDB_SID="$PDB"
 
 sqlplus -s / as sysdba <<EOF
-purge dba_recyclebin;
 set trim on
 set trims on
 set feedback off
@@ -33,18 +32,20 @@ SET UND off
 set lines 10000 pages 5000
 spo _inativas.txt;
 
-alter session set container="$PDB";
 SELECT
-    'ALTER SYSTEM KILL SESSION '''
+    'ALTER SYSTEM DISCONNECT SESSION '''
     || sid
     || ','
     || serial#
+    || ',@'
+    || INST_ID
     || '''IMMEDIATE;'
 FROM
-    v\$session
+    gv\$session
 WHERE
         status = 'INACTIVE'
     AND taddr IS NULL
+    and LAST_CALL_ET >='300'
     AND username NOT IN ( 'ORACLE', 'SYS' );
 	
 spo off
